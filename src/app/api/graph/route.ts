@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
       const graphEdges = [];
 
       if (focusMember) {
+        console.log(`[Graph API] Processing ${focusMember} - found ${bills.length} bills`);
+
         // focusMember와 직접적으로만 연결된 노드들만 생성
 
         // 1단계: focusMember 노드 먼저 추가
@@ -85,11 +87,15 @@ export async function GET(request: NextRequest) {
         }
 
         // 2단계: focusMember와 직접 관계가 있는 사람들만 추가
+        let proposerBillCount = 0;
+        let cosponsorBillCount = 0;
+
         for (const bill of bills) {
           const proposer = bill.proposerRep;
 
           // focusMember가 대표발의자인 경우 - 공동발의자들과 연결
           if (bill.proposer_rep_id === focusMember) {
+            proposerBillCount++;
             for (const cosponsor of bill.cosponsors) {
               const member = cosponsor.member;
 
@@ -131,6 +137,7 @@ export async function GET(request: NextRequest) {
 
           // focusMember가 공동발의자인 경우 - 대표발의자와 연결
           if (bill.cosponsors.some(cs => cs.member_id === focusMember)) {
+            cosponsorBillCount++;
             // 대표발의자 노드 추가
             if (!nodeMap.has(proposer.member_id)) {
               nodeMap.set(proposer.member_id, {
@@ -166,6 +173,8 @@ export async function GET(request: NextRequest) {
             nodeMap.get(proposer.member_id).in += 1;
           }
         }
+
+        console.log(`[Graph API] ${focusMember} result - proposer: ${proposerBillCount}, cosponsor: ${cosponsorBillCount}, nodes: ${nodeMap.size}, edges: ${graphEdges.length}`);
       } else {
         // 전체 네트워크 (기존 로직)
         for (const bill of bills) {

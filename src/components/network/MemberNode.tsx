@@ -55,6 +55,7 @@ export const MemberNode = memo(({ data }: NodeProps<MemberNodeData>) => {
   const partyColor = getPartyColor(party);
 
 
+
   // direction에 따라 노드 크기 결정
   const sizeBasedOnDirection = direction === 'given' ? outDegree : inDegree;
   const { width, height } = getMemberSize(sizeBasedOnDirection);
@@ -91,22 +92,13 @@ export const MemberNode = memo(({ data }: NodeProps<MemberNodeData>) => {
         className="w-2 h-2 bg-gray-400 border-white"
       />
 
-      {/* Metrics Badge - 개선된 가시성 */}
-      {direction === 'both' && (
-        <div className="absolute -top-3 -right-3 bg-blue-600 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg z-50">
-          {inDegree}
-        </div>
-      )}
-      {direction === 'received' && (
-        <div className="absolute -top-3 -right-3 bg-green-600 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg z-50">
-          {inDegree}
-        </div>
-      )}
-      {direction === 'given' && (
-        <div className="absolute -top-3 -right-3 bg-orange-600 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg z-50">
-          {outDegree}
-        </div>
-      )}
+      {/* Metrics Badge - 항상 표시 */}
+      <div className="absolute -top-3 -right-3 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg z-50"
+           style={{
+             backgroundColor: direction === 'both' ? '#2563eb' : direction === 'received' ? '#16a34a' : '#ea580c'
+           }}>
+        {direction === 'given' ? outDegree : inDegree}
+      </div>
 
       {/* Party Label */}
       {/* {party && (
