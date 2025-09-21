@@ -20,7 +20,10 @@ import {
   RefreshCw,
   Download,
   Settings,
-  Filter
+  Filter,
+  ArrowLeftRight,
+  ArrowDown,
+  ArrowUp
 } from 'lucide-react';
 
 export type DirectionMode = 'both' | 'received' | 'given';
@@ -186,43 +189,52 @@ export function NetworkControlPanel({
         </div>
 
         {/* Direction Selection */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           <label className="text-sm font-medium text-gray-700">
             공동발의 방향
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <Button
               variant={direction === 'both' ? 'default' : 'outline'}
-              size="sm"
+              size="default"
               onClick={() => onDirectionChange('both')}
-              className="flex items-center gap-2"
+              className="flex items-center justify-start gap-3 h-12 px-4"
             >
-              <Filter className="w-4 h-4" />
-              전체
+              <ArrowLeftRight className="w-4 h-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">전체</span>
+                <span className="text-xs opacity-75">받은 것 + 준 것</span>
+              </div>
             </Button>
             <Button
               variant={direction === 'received' ? 'default' : 'outline'}
-              size="sm"
+              size="default"
               onClick={() => onDirectionChange('received')}
-              className="flex items-center gap-2"
+              className="flex items-center justify-start gap-3 h-12 px-4"
             >
-              <Download className="w-4 h-4" />
-              받은 것
+              <ArrowDown className="w-4 h-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">받은 것</span>
+                <span className="text-xs opacity-75">공동발의 지원받은 관계</span>
+              </div>
             </Button>
             <Button
               variant={direction === 'given' ? 'default' : 'outline'}
-              size="sm"
+              size="default"
               onClick={() => onDirectionChange('given')}
-              className="flex items-center gap-2"
+              className="flex items-center justify-start gap-3 h-12 px-4"
             >
-              <RefreshCw className="w-4 h-4" />
-              준 것
+              <ArrowUp className="w-4 h-4" />
+              <div className="flex flex-col items-start">
+                <span className="font-medium">준 것</span>
+                <span className="text-xs opacity-75">공동발의 지원한 관계</span>
+              </div>
             </Button>
           </div>
-          <div className="text-xs text-gray-500">
-            {direction === 'both' && '공동발의를 받은 것과 준 것을 모두 표시합니다'}
-            {direction === 'received' && '선택된 의원이 공동발의를 받은 관계만 표시합니다'}
-            {direction === 'given' && '선택된 의원이 공동발의를 준 관계만 표시합니다'}
+          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+            {direction === 'both' && '💡 선택된 의원의 모든 공동발의 관계를 표시합니다'}
+            {direction === 'received' && '📥 선택된 의원이 다른 의원들로부터 공동발의 지원을 받은 관계만 표시합니다'}
+            {direction === 'given' && '📤 선택된 의원이 다른 의원들에게 공동발의 지원을 제공한 관계만 표시합니다'}
           </div>
         </div>
 

@@ -24,8 +24,10 @@ export default function HomePage() {
 
   // direction 변경 핸들러에 로깅 추가
   const handleDirectionChange = (newDirection: DirectionMode) => {
+    console.log(`[HomePage] Direction changing from ${direction} to ${newDirection}`);
     setDirection(newDirection);
     setNetworkKey(prev => prev + 1); // 네트워크 새로고침
+    console.log(`[HomePage] NetworkKey incremented to force refresh`);
   };
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [networkKey, setNetworkKey] = useState(0);

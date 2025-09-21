@@ -51,6 +51,9 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
 
   // 클라이언트 사이드 direction 필터링 및 그래프 처리
   const processAndDisplayGraph = useCallback((data: GraphResponse) => {
+    console.log(`[NetworkVisualization] processAndDisplayGraph - direction: ${direction}, focusMemberId: ${focusMemberId}`);
+    console.log(`[NetworkVisualization] Original data - nodes: ${data.nodes.length}, edges: ${data.edges.length}`);
+
     let finalNodes = [...data.nodes];
     let finalEdges = [...data.edges];
 
@@ -69,6 +72,8 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
       });
 
       // direction에 따라 엣지 필터링 및 degree 재계산
+      console.log(`[NetworkVisualization] Filtering edges - direction: ${direction}, total edges: ${finalEdges.length}`);
+
       finalEdges.forEach(edge => {
         let includeEdge = false;
 
@@ -80,6 +85,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
             const targetNode = nodeMap.get(edge.target);
             if (sourceNode) sourceNode.out += edge.weight || 1;
             if (targetNode) targetNode.in += edge.weight || 1;
+            console.log(`[NetworkVisualization] Including 'received' edge: ${edge.source} -> ${edge.target}`);
           }
         } else if (direction === 'given') {
           // focusMember가 준 관계만 표시
@@ -89,6 +95,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
             const targetNode = nodeMap.get(edge.target);
             if (sourceNode) sourceNode.out += edge.weight || 1;
             if (targetNode) targetNode.in += edge.weight || 1;
+            console.log(`[NetworkVisualization] Including 'given' edge: ${edge.source} -> ${edge.target}`);
           }
         }
 
@@ -96,6 +103,8 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
           validEdges.push(edge);
         }
       });
+
+      console.log(`[NetworkVisualization] After filtering - valid edges: ${validEdges.length}`);
 
       // 관계가 없는 노드 제거 (focusMember 제외)
       finalNodes = Array.from(nodeMap.values()).filter(node =>
@@ -146,9 +155,19 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
       animated: (edge.weight || 0) > 5,
     }));
 
+    console.log(`[NetworkVisualization] Final result - nodes: ${reactFlowNodes.length}, edges: ${reactFlowEdges.length}`);
+
     setNodes(reactFlowNodes);
     setEdges(reactFlowEdges);
-    setStats(data.stats);
+
+    // 필터링된 통계 정보 업데이트
+    const filteredStats = {
+      ...data.stats,
+      nodeCount: reactFlowNodes.length,
+      edgeCount: reactFlowEdges.length,
+      direction: direction
+    };
+    setStats(filteredStats);
   }, [direction, focusMemberId, onNodeClick]);
 
   const fetchNetworkData = useCallback(async () => {
@@ -397,9 +416,15 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
         <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-4 shadow-lg border">
           <h3 className="text-sm font-semibold text-gray-800 mb-2">네트워크 통계</h3>
           <div className="text-xs text-gray-600 space-y-1">
+            <div className="flex items-center gap-2">
+              <span>필터:</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-medium">
+                {direction === 'both' ? '전체' : direction === 'received' ? '받은 것' : '준 것'}
+              </span>
+            </div>
             <div>노드: {stats.nodeCount}개</div>
             <div>엣지: {stats.edgeCount}개</div>
-            {stats.timeRange.from && (
+            {stats.timeRange?.from && (
               <div>기간: {stats.timeRange.from} ~ {stats.timeRange.to}</div>
             )}
           </div>
