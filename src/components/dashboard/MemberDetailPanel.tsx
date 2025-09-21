@@ -99,8 +99,8 @@ export function MemberDetailPanel({ memberId, onClose }: MemberDetailPanelProps)
         </CardContent>
       </Card>
 
-      {/* Bills Proposed */}
-      <Card>
+      {/* Bills Proposed - 주석처리 */}
+      {/* <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm lg:text-base">
             <GitBranch className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -124,45 +124,48 @@ export function MemberDetailPanel({ memberId, onClose }: MemberDetailPanelProps)
             <p className="text-sm text-gray-500">대표발의 법안이 없습니다.</p>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
-      {/* Top Collaborators */}
+      {/* Top Collaborators - 공동발의 지원을 많이 해준 의원 기준 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm lg:text-base">
             <Users className="w-4 h-4 lg:w-5 lg:h-5" />
-            주요 협력 의원 (10)
+            공동발의 지원 의원 (TOP 10)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {member.topCollaborators.length > 0 ? (
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {member.topCollaborators.slice(0, 5).map((collaborator) => (
-                <div key={collaborator.memberId} className="p-2 border rounded space-y-1">
+              {member.topCollaborators
+                .sort((a, b) => b.supportedToTarget - a.supportedToTarget) // 지원해준 횟수 기준 내림차순 정렬
+                .slice(0, 10)
+                .map((collaborator, index) => (
+                <div key={collaborator.memberId} className="p-3 border rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-xs lg:text-sm truncate">{collaborator.name}</div>
-                      {collaborator.party && (
-                        <div className="text-xs text-gray-500 truncate">{collaborator.party}</div>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-blue-600">{index + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{collaborator.name}</div>
+                        {collaborator.party && (
+                          <div className="text-xs text-gray-500 truncate">{collaborator.party}</div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-3 text-sm">
                     <div className="flex items-center gap-1">
-                      <span className="text-green-600 font-medium">{collaborator.supportedToTarget}회</span>
-                      <span className="text-gray-500">지원</span>
-                    </div>
-                    <span className="text-gray-400">•</span>
-                    <div className="flex items-center gap-1">
-                      <span className="text-blue-600 font-medium">{collaborator.supportedFromTarget}회</span>
-                      <span className="text-gray-500">받음</span>
+                      <span className="text-blue-600 font-bold text-lg">{collaborator.supportedToTarget}회</span>
+                      <span className="text-gray-600">공동발의 지원</span>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">협력 데이터가 없습니다.</p>
+            <p className="text-sm text-gray-500">공동발의 지원 데이터가 없습니다.</p>
           )}
         </CardContent>
       </Card>
