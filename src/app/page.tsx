@@ -47,8 +47,8 @@ export default function HomePage() {
   }, []);
 
   const handleCloseMemberDetail = useCallback(() => {
-    // Keep the member selected for network but close the detail panel
-    // The detail panel controls its own visibility
+    // Close the detail panel by clearing the selected member
+    setSelectedMemberId(null);
   }, []);
 
   // Load stats on component mount
@@ -207,7 +207,7 @@ export default function HomePage() {
         </div>
 
         {/* Center - Network Visualization */}
-        <div className="flex-1 relative mobile-main tablet-main desktop-main">
+        <div className={`flex-1 relative mobile-main tablet-main desktop-main ${selectedMemberId ? 'lg:mr-96 xl:mr-[28rem]' : ''}`}>
           {selectedMemberId ? (
             <>
               <NetworkVisualization
