@@ -131,17 +131,20 @@ export function MemberDetailPanel({ memberId, onClose }: MemberDetailPanelProps)
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-sm lg:text-base">
             <Users className="w-4 h-4 lg:w-5 lg:h-5" />
-            공동발의 지원 의원 (TOP 10)
+주요 협력 의원 (TOP 10)
           </CardTitle>
+          <div className="text-xs text-gray-500 mt-2">
+            해당 의원이 선택한 의원에게 지원함 / 해당 의원이 선택한 의원에게서 받음
+          </div>
         </CardHeader>
         <CardContent>
           {member.topCollaborators.length > 0 ? (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2">
               {member.topCollaborators
                 .sort((a, b) => b.supportedToTarget - a.supportedToTarget) // 지원해준 횟수 기준 내림차순 정렬
                 .slice(0, 10)
                 .map((collaborator, index) => (
-                <div key={collaborator.memberId} className="p-3 border rounded space-y-2">
+                <div key={collaborator.memberId} className="p-3 border rounded">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
@@ -154,11 +157,16 @@ export function MemberDetailPanel({ memberId, onClose }: MemberDetailPanelProps)
                         )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <div className="flex items-center gap-1">
-                      <span className="text-blue-600 font-bold text-lg">{collaborator.supportedToTarget}회</span>
-                      <span className="text-gray-600">공동발의 지원</span>
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center gap-1">
+                        <span className="text-blue-600 font-bold text-lg">{collaborator.supportedToTarget}회</span>
+                        <span className="text-gray-600">지원함</span>
+                      </div>
+                      <span className="text-gray-400">•</span>
+                      <div className="flex items-center gap-1">
+                        <span className="text-green-600 font-bold text-lg">{collaborator.supportedFromTarget}회</span>
+                        <span className="text-gray-600">받음</span>
+                      </div>
                     </div>
                   </div>
                 </div>
