@@ -1,0 +1,141 @@
+/* Responsive Styles for LegisNet */
+
+/* Mobile First Approach */
+@media (max-width: 640px) {
+  /* Mobile Header */
+  .mobile-header {
+    @apply px-4 py-3;
+  }
+
+  .mobile-header h1 {
+    @apply text-xl;
+  }
+
+  .mobile-header p {
+    @apply text-xs;
+  }
+
+  /* Mobile Layout */
+  .mobile-layout {
+    @apply flex-col;
+  }
+
+  .mobile-sidebar {
+    @apply w-full h-auto;
+  }
+
+  .mobile-main {
+    @apply h-[60vh];
+  }
+
+  /* Mobile Control Panel */
+  .mobile-controls {
+    @apply p-3 space-y-3;
+  }
+
+  .mobile-controls .grid {
+    @apply grid-cols-1 gap-2;
+  }
+
+  /* Mobile Network Stats */
+  .mobile-stats {
+    @apply text-xs;
+  }
+
+  /* Mobile Member Detail */
+  .mobile-detail {
+    @apply fixed inset-0 z-50;
+  }
+
+  /* Mobile Footer */
+  .mobile-footer {
+    @apply px-4 py-2;
+  }
+
+  .mobile-footer .flex {
+    @apply flex-col gap-2 text-xs;
+  }
+}
+
+/* Tablet Styles */
+@media (min-width: 641px) and (max-width: 1024px) {
+  /* Tablet Layout */
+  .tablet-layout {
+    @apply flex-row;
+  }
+
+  .tablet-sidebar {
+    @apply w-64;
+  }
+
+  .tablet-main {
+    @apply flex-1 h-[calc(100vh-100px)];
+  }
+
+  /* Tablet Member Detail */
+  .tablet-detail {
+    @apply w-80;
+  }
+}
+
+/* Desktop Styles */
+@media (min-width: 1025px) {
+  /* Desktop optimizations */
+  .desktop-layout {
+    @apply flex-row;
+  }
+
+  .desktop-sidebar {
+    @apply w-80;
+  }
+
+  .desktop-main {
+    @apply flex-1;
+  }
+
+  .desktop-detail {
+    @apply w-96;
+  }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Enhanced visuals for retina displays */
+  .network-node {
+    @apply ring-1 ring-black/10;
+  }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-white;
+  }
+
+  .dark-mode .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+
+  .dark-mode .network-stats {
+    @apply bg-gray-800/90;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .reduced-motion * {
+    @apply transition-none !important;
+    animation: none !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .print-hidden {
+    @apply hidden;
+  }
+
+  .print-layout {
+    @apply text-black bg-white;
+  }
+}

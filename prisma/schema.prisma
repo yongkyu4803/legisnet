@@ -1,0 +1,68 @@
+// MVP Prisma schema for LegisNet - 22nd National Assembly Co-sponsorship Network
+// Simplified structure focusing on core 4 fields: bill_no, bill_name, proposer, cosponsors
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// 의원 정보 (22대 국회만)
+model Member {
+  member_id  String @id @default(cuid())
+  name       String
+  party      String? // 정당명 (선택적)
+  age        Int    @default(22) // 22대 국회 고정
+  created_at DateTime @default(now())
+  updated_at DateTime @default(now()) @updatedAt
+
+  // Relations
+  bills_proposed   Bill[]   @relation("ProposerRep")
+  bills_cosponsor  BillCosponsor[]
+
+  @@unique([name, age], name: "uq_member_name_age")
+  @@map("members")
+}
+
+// 법안 정보 (핵심 필드만)
+model Bill {
+  bill_id      String     @id         // API BILL_ID
+  bill_no      String?                // 의안번호 (API BILL_NO)
+  bill_name    String                 // 법안명 (API BILL_NAME)
+  age          Int        @default(22) // 22대 국회 고정
+  propose_date DateTime?              // 제안일 (API PROPOSE_DT)
+
+  // 대표발의자 관계
+  proposer_rep_id String
+  proposerRep     Member   @relation("ProposerRep", fields: [proposer_rep_id], references: [member_id], onDelete: Cascade)
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @default(now()) @updatedAt
+
+  // 공동발의자 관계
+  cosponsors   BillCosponsor[]
+
+  @@map("bills")
+}
+
+// 법안-공동발의자 관계 (다대다)
+model BillCosponsor {
+  bill_id   String
+  member_id String
+
+  bill   Bill   @relation(fields: [bill_id], references: [bill_id], onDelete: Cascade)
+  member Member @relation(fields: [member_id], references: [member_id], onDelete: Cascade)
+
+  @@id([bill_id, member_id])
+  @@map("bill_cosponsors")
+}
+
+// MVP에서는 제거된 테이블들:
+// - EdgeSupport (계산으로 생성 가능)
+// - EdgeCoSupport (계산으로 생성 가능)
+// - MetricsMemberTotal (계산으로 생성 가능)
+// - BillResult enum (핵심 기능에 불필요)
+// - 정당/위원회 관련 필드들 (API에서 제공 안함)
