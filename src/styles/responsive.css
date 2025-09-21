@@ -21,11 +21,11 @@
   }
 
   .mobile-sidebar {
-    @apply w-full h-auto;
+    @apply w-full h-auto max-h-[45vh] overflow-y-auto;
   }
 
   .mobile-main {
-    @apply h-[60vh];
+    @apply h-[55vh] min-h-[400px];
   }
 
   /* Mobile Control Panel */

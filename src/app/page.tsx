@@ -135,8 +135,8 @@ export default function HomePage() {
               onRefresh={handleRefreshNetwork}
             />
 
-            {/* Quick Stats */}
-            <Card>
+            {/* Quick Stats - Desktop/Tablet only */}
+            <Card className="hidden md:block">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-sm lg:text-base">
                   <BarChart3 className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -162,6 +162,14 @@ export default function HomePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Compact Stats for Mobile */}
+            <div className="md:hidden bg-gray-50 p-3 rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">의원 {stats.members}명</span>
+                <span className="text-gray-600">연결 {stats.cosponsorships}건</span>
+              </div>
+            </div>
 
             {/* Usage Guide - Hidden on mobile */}
             <Card className="hidden lg:block">

@@ -193,7 +193,9 @@ export function NetworkControlPanel({
           <label className="text-sm font-medium text-gray-700">
             공동발의 방향
           </label>
-          <div className="grid grid-cols-1 gap-2">
+
+          {/* Desktop/Tablet: 세로 배치 */}
+          <div className="hidden sm:grid grid-cols-1 gap-2">
             <Button
               variant={direction === 'both' ? 'default' : 'outline'}
               size="default"
@@ -231,6 +233,39 @@ export function NetworkControlPanel({
               </div>
             </Button>
           </div>
+
+          {/* Mobile: 가로 배치 (컴팩트) */}
+          <div className="sm:hidden grid grid-cols-3 gap-1">
+            <Button
+              variant={direction === 'both' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onDirectionChange('both')}
+              className="flex flex-col items-center gap-1 h-16 px-2"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+              <span className="text-xs font-medium">전체</span>
+            </Button>
+            <Button
+              variant={direction === 'received' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onDirectionChange('received')}
+              className="flex flex-col items-center gap-1 h-16 px-2"
+            >
+              <ArrowDown className="w-4 h-4" />
+              <span className="text-xs font-medium">받은 것</span>
+            </Button>
+            <Button
+              variant={direction === 'given' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onDirectionChange('given')}
+              className="flex flex-col items-center gap-1 h-16 px-2"
+            >
+              <ArrowUp className="w-4 h-4" />
+              <span className="text-xs font-medium">준 것</span>
+            </Button>
+          </div>
+
+          {/* 설명 텍스트 */}
           <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
             {direction === 'both' && '💡 선택된 의원의 모든 공동발의 관계를 표시합니다'}
             {direction === 'received' && '📥 선택된 의원이 다른 의원들로부터 공동발의 지원을 받은 관계만 표시합니다'}
