@@ -467,11 +467,11 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
         key={`${direction}-${focusMemberId}-${nodes.length}-${edges.length}`}
         nodes={nodes}
         edges={edges}
-        onNodesChange={() => {}} // 노드 변경 비활성화
+        onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
-        nodesDraggable={false}
+        nodesDraggable={true}
         nodesConnectable={false}
         elementsSelectable={true}
         defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
