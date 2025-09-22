@@ -56,6 +56,42 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
   const processAndDisplayGraph = useCallback((data: GraphResponse) => {
     console.log(`[NetworkVisualization] processAndDisplayGraph called - direction: ${direction}, nodes: ${data.nodes.length}, edges: ${data.edges.length}, focusMemberId: ${focusMemberId}`);
 
+    // API에서 받은 원본 데이터의 degree 값들 확인
+    console.log(`[NetworkVisualization] Original API data sample:`, data.nodes.slice(0, 3).map(node => ({
+      id: node.id,
+      label: node.label,
+      in: node.in,
+      out: node.out
+    })));
+
+    // 실제 엣지 데이터를 기반으로 degree 직접 계산하는 함수
+    const calculateRealDegrees = (nodes: any[], edges: any[]) => {
+      const degreeMap = new Map();
+
+      // 모든 노드를 0으로 초기화
+      nodes.forEach(node => {
+        degreeMap.set(node.id, { in: 0, out: 0 });
+      });
+
+      // 엣지를 순회하면서 실제 degree 계산
+      edges.forEach(edge => {
+        const sourceDegree = degreeMap.get(edge.source) || { in: 0, out: 0 };
+        const targetDegree = degreeMap.get(edge.target) || { in: 0, out: 0 };
+
+        sourceDegree.out += edge.weight || 1;
+        targetDegree.in += edge.weight || 1;
+
+        degreeMap.set(edge.source, sourceDegree);
+        degreeMap.set(edge.target, targetDegree);
+      });
+
+      console.log(`[NetworkVisualization] Calculated real degrees:`, Array.from(degreeMap.entries()).slice(0, 5));
+      return degreeMap;
+    };
+
+    // 실제 degree 계산
+    const realDegrees = calculateRealDegrees(data.nodes, data.edges);
+
     let finalNodes = [...data.nodes];
     let finalEdges = [...data.edges];
 
@@ -142,20 +178,23 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
       return;
     }
 
-    // 필터링된 degree 값으로 노드 생성 (레이아웃은 별도로 적용)
-    const reactFlowNodes = finalNodes.map(node => ({
-      id: node.id,
-      type: 'member',
-      position: { x: 0, y: 0 }, // 임시 위치, 나중에 layoutNodes에서 재설정
-      data: {
-        label: node.label,
-        party: node.meta?.party,
-        inDegree: node.in ?? 0,
-        outDegree: node.out ?? 0,
-        direction, // 중요: direction을 명시적으로 전달
-        onClick: () => onNodeClick?.(node.id)
-      }
-    }));
+    // 실제 계산된 degree 값으로 노드 생성 (레이아웃은 별도로 적용)
+    const reactFlowNodes = finalNodes.map(node => {
+      const realDegree = realDegrees.get(node.id) || { in: 0, out: 0 };
+      return {
+        id: node.id,
+        type: 'member',
+        position: { x: 0, y: 0 }, // 임시 위치, 나중에 layoutNodes에서 재설정
+        data: {
+          label: node.label,
+          party: node.meta?.party,
+          inDegree: realDegree.in,
+          outDegree: realDegree.out,
+          direction, // 중요: direction을 명시적으로 전달
+          onClick: () => onNodeClick?.(node.id)
+        }
+      };
+    });
 
     const reactFlowEdges = finalEdges.map((edge) => ({
       id: `${edge.source}-${edge.target}`,
@@ -248,9 +287,16 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
         const centerX = 400;
         const centerY = 300;
 
-        // direction에 따라 정렬 기준 변경
-        const sortField = direction === 'given' ? 'out' : 'in';
-        const sortedNodes = [...nodes].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0));
+        // degree 기반 정렬을 위한 함수
+        const getNodeDegree = (node: any) => {
+          if (direction === 'given') {
+            return node.data?.outDegree ?? node.out ?? 0;
+          } else {
+            return node.data?.inDegree ?? node.in ?? 0;
+          }
+        };
+
+        const sortedNodes = [...nodes].sort((a, b) => getNodeDegree(b) - getNodeDegree(a));
 
         // focusMember 찾기
         const focusNode = sortedNodes.find(n => n.id === focusMemberId);
@@ -267,17 +313,8 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
 
         // 2. 나머지 노드들을 degree에 따라 동심원으로 배치
         if (otherNodes.length > 0) {
-          // direction에 따라 degree 값 가져오기 함수
-          const getDegree = (node: any) => {
-            if (direction === 'given') {
-              return node.data?.outDegree ?? node.out ?? 0;
-            } else {
-              return node.data?.inDegree ?? node.in ?? 0;
-            }
-          };
-
-          // degree에 따라 정렬
-          const sortedOtherNodes = [...otherNodes].sort((a, b) => getDegree(b) - getDegree(a));
+          // degree에 따라 정렬 (이미 앞에서 정렬됨)
+          const sortedOtherNodes = [...otherNodes];
 
           // 개선된 동심원 레이아웃: degree에 따른 10개 동심원
           const getRadiusForDegree = (degree: number) => {
@@ -297,7 +334,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
           const radiusGroups = new Map<number, any[]>();
 
           sortedOtherNodes.forEach(node => {
-            const degree = getDegree(node);
+            const degree = getNodeDegree(node);
             const radius = getRadiusForDegree(degree);
 
             console.log(`[layoutNodes] Node ${node.id} - degree: ${degree}, radius: ${radius}`);
@@ -341,7 +378,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
                   const x = centerX + Math.cos(angle) * adjustedRadius;
                   const y = centerY + Math.sin(angle) * adjustedRadius;
 
-                  console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${adjustedRadius.toFixed(0)}, degree ${getDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
+                  console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${adjustedRadius.toFixed(0)}, degree ${getNodeDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
 
                   layoutedNodes.push({
                     ...node,
@@ -359,7 +396,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
                 const x = centerX + Math.cos(angle) * radius;
                 const y = centerY + Math.sin(angle) * radius;
 
-                console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${radius.toFixed(0)}, degree ${getDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
+                console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${radius.toFixed(0)}, degree ${getNodeDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
 
                 layoutedNodes.push({
                   ...node,
@@ -384,7 +421,7 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
             onClick: node.data?.onClick || (() => onNodeClick?.(node.id)),
           },
         }));
-  }, [direction, onNodeClick]);
+  }, [direction, onNodeClick, focusMemberId]);
 
   useEffect(() => {
     fetchNetworkData();

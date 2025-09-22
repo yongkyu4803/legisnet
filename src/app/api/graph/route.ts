@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
           }
 
           if (focusNodeInfo) {
+            // focusMember의 초기 degree는 0으로 시작하되, 실제 계산에서 업데이트될 예정
             nodeMap.set(focusMember, {
               id: focusMember,
               label: focusNodeInfo.name,
@@ -174,6 +175,14 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        // focusMember의 최종 degree 계산 결과 로그
+        const focusNode = nodeMap.get(focusMember);
+        console.log(`[Graph API] ${focusMember} final stats - in: ${focusNode?.in}, out: ${focusNode?.out}`);
+
+        // 다른 노드들의 degree도 확인
+        const otherNodes = Array.from(nodeMap.values()).filter(node => node.id !== focusMember);
+        console.log(`[Graph API] Other nodes degrees:`, otherNodes.slice(0, 5).map(node => `${node.label}: in=${node.in}, out=${node.out}`));
+
         console.log(`[Graph API] ${focusMember} result - proposer: ${proposerBillCount}, cosponsor: ${cosponsorBillCount}, nodes: ${nodeMap.size}, edges: ${graphEdges.length}`);
       } else {
         // 전체 네트워크 (기존 로직)
@@ -237,20 +246,20 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // 모든 경우에 0값 노드 제거 (공통 로직)
-      for (const [nodeId, node] of nodeMap) {
-        if (focusMember) {
-          // focusMember가 있는 경우: focusMember와 실제 관계가 없는 노드 제거
-          if (nodeId !== focusMember && node.in === 0 && node.out === 0) {
-            nodeMap.delete(nodeId);
-          }
-        } else {
-          // 전체 네트워크의 경우: 아예 관계가 없는 노드 제거
-          if (node.in === 0 && node.out === 0) {
-            nodeMap.delete(nodeId);
-          }
-        }
-      }
+      // TEMPORARY: 0값 노드 제거 로직 비활성화 - 디버깅용
+      // for (const [nodeId, node] of nodeMap) {
+      //   if (focusMember) {
+      //     // focusMember가 있는 경우: focusMember와 실제 관계가 없는 노드 제거
+      //     if (nodeId !== focusMember && node.in === 0 && node.out === 0) {
+      //       nodeMap.delete(nodeId);
+      //     }
+      //   } else {
+      //     // 전체 네트워크의 경우: 아예 관계가 없는 노드 제거
+      //     if (node.in === 0 && node.out === 0) {
+      //       nodeMap.delete(nodeId);
+      //     }
+      //   }
+      // }
 
       // 연결되지 않은 엣지 제거 (공통 로직)
       const validNodeIds = new Set(nodeMap.keys());
