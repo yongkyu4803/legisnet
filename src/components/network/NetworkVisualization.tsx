@@ -142,22 +142,20 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
       return;
     }
 
-    // 레이아웃 적용 시 필터링된 degree 값 보존
-    const reactFlowNodes = layoutNodes(finalNodes).map(layoutNode => {
-      // 원본 노드에서 필터링된 degree 값 찾기
-      const originalNode = finalNodes.find(n => n.id === layoutNode.id);
-      if (!originalNode) return null; // 안전 체크
-
-      return {
-        ...layoutNode,
-        data: {
-          ...layoutNode.data,
-          inDegree: originalNode.in ?? 0,
-          outDegree: originalNode.out ?? 0,
-          direction, // 중요: direction을 명시적으로 전달
-        }
-      };
-    }).filter(Boolean); // null 제거
+    // 필터링된 degree 값으로 노드 생성 (레이아웃은 별도로 적용)
+    const reactFlowNodes = finalNodes.map(node => ({
+      id: node.id,
+      type: 'member',
+      position: { x: 0, y: 0 }, // 임시 위치, 나중에 layoutNodes에서 재설정
+      data: {
+        label: node.label,
+        party: node.meta?.party,
+        inDegree: node.in ?? 0,
+        outDegree: node.out ?? 0,
+        direction, // 중요: direction을 명시적으로 전달
+        onClick: () => onNodeClick?.(node.id)
+      }
+    }));
 
     const reactFlowEdges = finalEdges.map((edge) => ({
       id: `${edge.source}-${edge.target}`,
@@ -173,8 +171,13 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
 
     console.log(`[NetworkVisualization] Setting React Flow - nodes: ${reactFlowNodes.length}, edges: ${reactFlowEdges.length}, direction: ${direction}`);
 
-    // 간단한 상태 업데이트
-    setNodes(reactFlowNodes);
+    // 레이아웃 적용
+    console.log(`[NetworkVisualization] Calling layoutNodes with ${reactFlowNodes.length} nodes, direction: ${direction}, focusMemberId: ${focusMemberId}`);
+    const layoutedNodes = layoutNodes(reactFlowNodes);
+    console.log(`[NetworkVisualization] Layout applied to ${layoutedNodes.length} nodes`);
+
+    // 상태 업데이트
+    setNodes(layoutedNodes);
     setEdges(reactFlowEdges);
 
     // 뷰 자동 조정
@@ -235,47 +238,150 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
     }
   }, [mode, age, focusMemberId, processAndDisplayGraph]);
 
-  // 간단한 그리드 레이아웃
+  // 원형 레이아웃
   const layoutNodes = useCallback((nodes: any[]) => {
         if (nodes.length === 0) return [];
 
+        console.log(`[layoutNodes] First node sample:`, nodes[0]);
+
         const layoutedNodes = [];
+        const centerX = 400;
+        const centerY = 300;
 
         // direction에 따라 정렬 기준 변경
         const sortField = direction === 'given' ? 'out' : 'in';
         const sortedNodes = [...nodes].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0));
 
-        // 간단한 그리드 배치
-        const cols = Math.ceil(Math.sqrt(sortedNodes.length));
-        const spacing = 120;
+        // focusMember 찾기
+        const focusNode = sortedNodes.find(n => n.id === focusMemberId);
+        const otherNodes = sortedNodes.filter(n => n.id !== focusMemberId);
 
-        sortedNodes.forEach((node, index) => {
-          const row = Math.floor(index / cols);
-          const col = index % cols;
-
-          const x = col * spacing + 100;
-          const y = row * spacing + 100;
-
-          console.log(`[layoutNodes] Node ${node.id} positioned at (${x}, ${y})`);
-
+        // 1. focusMember를 중앙에 배치
+        if (focusNode) {
+          console.log(`[layoutNodes] Focus node ${focusNode.id} positioned at center (${centerX}, ${centerY})`);
           layoutedNodes.push({
-            ...node,
-            position: { x, y }
+            ...focusNode,
+            position: { x: centerX, y: centerY }
           });
-        });
+        }
+
+        // 2. 나머지 노드들을 degree에 따라 동심원으로 배치
+        if (otherNodes.length > 0) {
+          // direction에 따라 degree 값 가져오기 함수
+          const getDegree = (node: any) => {
+            if (direction === 'given') {
+              return node.data?.outDegree ?? node.out ?? 0;
+            } else {
+              return node.data?.inDegree ?? node.in ?? 0;
+            }
+          };
+
+          // degree에 따라 정렬
+          const sortedOtherNodes = [...otherNodes].sort((a, b) => getDegree(b) - getDegree(a));
+
+          // 개선된 동심원 레이아웃: degree에 따른 10개 동심원
+          const getRadiusForDegree = (degree: number) => {
+            if (degree >= 50) return 80;      // 1원: 최고 중심성 (50+)
+            if (degree >= 40) return 130;     // 2원: 매우 높은 중심성 (40-49)
+            if (degree >= 30) return 180;     // 3원: 높은 중심성 (30-39)
+            if (degree >= 20) return 230;     // 4원: 중상 중심성 (20-29)
+            if (degree >= 15) return 280;     // 5원: 중간-높은 중심성 (15-19)
+            if (degree >= 10) return 330;     // 6원: 중간 중심성 (10-14)
+            if (degree >= 5) return 380;      // 7원: 중간-낮은 중심성 (5-9)
+            if (degree >= 2) return 430;      // 8원: 낮은 중심성 (2-4)
+            if (degree >= 1) return 480;      // 9원: 매우 낮은 중심성 (1)
+            return 530;                        // 10원: 최소 중심성 (0)
+          };
+
+          // 각 거리별로 노드들을 그룹화
+          const radiusGroups = new Map<number, any[]>();
+
+          sortedOtherNodes.forEach(node => {
+            const degree = getDegree(node);
+            const radius = getRadiusForDegree(degree);
+
+            console.log(`[layoutNodes] Node ${node.id} - degree: ${degree}, radius: ${radius}`);
+
+            if (!radiusGroups.has(radius)) {
+              radiusGroups.set(radius, []);
+            }
+            radiusGroups.get(radius)!.push(node);
+          });
+
+          // 각 그룹별로 원형 배치 (개선된 알고리즘)
+          radiusGroups.forEach((nodesAtRadius, radius) => {
+            const nodeCount = nodesAtRadius.length;
+
+            // 노드 크기를 고려한 최소 각도 간격 계산
+            const minNodeSize = 40; // 최소 노드 크기
+            const minAngleSpacing = Math.max(
+              (2 * Math.PI) / nodeCount, // 균등 분배
+              (minNodeSize * 1.5) / radius // 최소 간격 보장
+            );
+
+            // 노드가 너무 많으면 반지름을 늘려서 다중 링으로 분산
+            const maxNodesPerRing = Math.floor((2 * Math.PI * radius) / (minNodeSize * 1.5));
+
+            if (nodeCount > maxNodesPerRing && nodeCount > 12) {
+              // 큰 그룹을 여러 링으로 분산
+              const ringsNeeded = Math.ceil(nodeCount / maxNodesPerRing);
+              const nodesPerRing = Math.ceil(nodeCount / ringsNeeded);
+
+              for (let ring = 0; ring < ringsNeeded; ring++) {
+                const startIdx = ring * nodesPerRing;
+                const endIdx = Math.min(startIdx + nodesPerRing, nodeCount);
+                const ringNodes = nodesAtRadius.slice(startIdx, endIdx);
+                const adjustedRadius = radius + (ring * 25); // 25px 간격으로 링 분산
+
+                ringNodes.forEach((node, index) => {
+                  const angleStep = (2 * Math.PI) / ringNodes.length;
+                  const startAngle = (ring * Math.PI / 4); // 링마다 다른 시작 각도
+                  const angle = startAngle + (index * angleStep);
+
+                  const x = centerX + Math.cos(angle) * adjustedRadius;
+                  const y = centerY + Math.sin(angle) * adjustedRadius;
+
+                  console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${adjustedRadius.toFixed(0)}, degree ${getDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
+
+                  layoutedNodes.push({
+                    ...node,
+                    position: { x, y }
+                  });
+                });
+              }
+            } else {
+              // 일반적인 단일 링 배치
+              nodesAtRadius.forEach((node, index) => {
+                const angleStep = Math.max(minAngleSpacing, (2 * Math.PI) / nodeCount);
+                const startAngle = (radius / 100) * 0.5; // 링마다 다른 시작 각도
+                const angle = startAngle + (index * angleStep);
+
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+
+                console.log(`[layoutNodes] Node ${node.id} positioned at ring ${Math.floor(radius/50)}, radius ${radius.toFixed(0)}, degree ${getDegree(node)}, position (${x.toFixed(0)}, ${y.toFixed(0)})`);
+
+                layoutedNodes.push({
+                  ...node,
+                  position: { x, y }
+                });
+              });
+            }
+          });
+        }
 
         return layoutedNodes.map(node => ({
           id: node.id,
           type: 'member',
           position: node.position,
           data: {
-            label: node.label,
-            party: node.meta?.party || '정당정보없음',
-            inDegree: node.in ?? 0, // 안전한 fallback
-            outDegree: node.out ?? 0, // 안전한 fallback
+            label: node.data?.label || node.label,
+            party: node.data?.party || node.meta?.party || '정당정보없음',
+            inDegree: node.data?.inDegree ?? node.in ?? 0,
+            outDegree: node.data?.outDegree ?? node.out ?? 0,
             betweenness: 0,
-            direction: 'both', // layoutNodes에서는 기본값만 설정, 실제 direction은 processAndDisplayGraph에서 덮어씀
-            onClick: () => onNodeClick?.(node.id),
+            direction: node.data?.direction || direction,
+            onClick: node.data?.onClick || (() => onNodeClick?.(node.id)),
           },
         }));
   }, [direction, onNodeClick]);
@@ -289,175 +395,12 @@ function NetworkFlow({ mode, age, direction, onNodeClick, focusMemberId }: Netwo
     console.log(`[NetworkVisualization] Direction useEffect triggered - direction: ${direction}, fullGraphData: ${!!fullGraphData}, loading: ${loading}`);
     if (fullGraphData && !loading) {
       console.log(`[NetworkVisualization] Triggering processAndDisplayGraph for direction: ${direction}`);
-      // processAndDisplayGraph를 직접 호출하지 않고 내부 로직을 여기서 실행
-      const data = fullGraphData;
-
-      let finalNodes = [...data.nodes];
-      let finalEdges = [...data.edges];
-
-      // direction='both'일 때는 원본 데이터 그대로 사용
-      if (direction === 'both') {
-        console.log(`[NetworkVisualization] Using original data for 'both' direction`);
-      } else {
-        console.log(`[NetworkVisualization] Applying ${direction} filter - nodes: ${data.nodes.length}, edges: ${data.edges.length}`);
-
-        // direction에 따른 클라이언트 사이드 필터링
-        const nodeMap = new Map();
-        const validEdges = [];
-
-        // 모든 노드를 0으로 초기화하되 원본 데이터 보존
-        finalNodes.forEach(node => {
-          nodeMap.set(node.id, {
-            ...node,
-            in: 0,
-            out: 0,
-            originalIn: node.in || 0,
-            originalOut: node.out || 0
-          });
-        });
-
-        // direction에 따라 엣지 필터링 및 degree 재계산
-        finalEdges.forEach((edge) => {
-          let includeEdge = false;
-
-          if (direction === 'received') {
-            // focusMember가 받은 관계만 표시 (다른 의원이 focusMember에게 공동발의 지원)
-            if (edge.target === focusMemberId) {
-              includeEdge = true;
-              const sourceNode = nodeMap.get(edge.source);
-              const targetNode = nodeMap.get(edge.target);
-              if (sourceNode) sourceNode.out += edge.weight || 1;
-              if (targetNode) targetNode.in += edge.weight || 1;
-            }
-          } else if (direction === 'given') {
-            // focusMember가 준 관계만 표시 (focusMember가 다른 의원에게 공동발의 지원)
-            if (edge.source === focusMemberId) {
-              includeEdge = true;
-              const sourceNode = nodeMap.get(edge.source);
-              const targetNode = nodeMap.get(edge.target);
-              if (sourceNode) sourceNode.out += edge.weight || 1;
-              if (targetNode) targetNode.in += edge.weight || 1;
-            }
-          }
-
-          if (includeEdge) {
-            validEdges.push(edge);
-          }
-        });
-
-        console.log(`[NetworkVisualization] ${direction} filter result: ${validEdges.length}/${data.edges.length} edges`);
-
-        // 필터링된 엣지에 연결된 노드만 유지
-        const connectedNodeIds = new Set();
-        validEdges.forEach(edge => {
-          connectedNodeIds.add(edge.source);
-          connectedNodeIds.add(edge.target);
-        });
-
-        // focusMember는 항상 포함
-        connectedNodeIds.add(focusMemberId);
-
-        finalNodes = Array.from(nodeMap.values()).filter(node =>
-          connectedNodeIds.has(node.id)
-        );
-        finalEdges = validEdges;
-
-        // 빈 결과 처리
-        if (direction !== 'both' && finalEdges.length === 0) {
-          console.log(`[NetworkVisualization] No edges found for ${direction} direction, showing empty state`);
-          setNodes([]);
-          setEdges([]);
-          setStats({
-            nodeCount: 0,
-            edgeCount: 0,
-            timeRange: data.stats?.timeRange || null
-          });
-          return;
-        }
-      }
-
-      // 레이아웃 적용 - 직접 구현해서 의존성 제거
-      const centerX = 400;
-      const centerY = 300;
-
-      // focusMember 찾기
-      const focusNode = finalNodes.find(n => n.id === focusMemberId);
-      const otherNodes = finalNodes.filter(n => n.id !== focusMemberId);
-
-      const layoutedNodes = [];
-
-      // 1. focusMember를 정확히 중심에 배치
-      if (focusNode) {
-        layoutedNodes.push({
-          ...focusNode,
-          position: { x: centerX, y: centerY }
-        });
-      }
-
-      // 2. 나머지 노드들을 inDegree에 따라 중심에서 거리별로 배치
-      if (otherNodes.length > 0) {
-        // direction에 따라 정렬 기준 변경
-        const sortField = direction === 'given' ? 'out' : 'in';
-        const sortedOtherNodes = [...otherNodes].sort((a, b) => (b[sortField] || 0) - (a[sortField] || 0));
-
-        // 간단한 원형 배치
-        sortedOtherNodes.forEach((node, index) => {
-          const angle = (index / sortedOtherNodes.length) * 2 * Math.PI;
-          const radius = 200;
-          const x = centerX + Math.cos(angle) * radius;
-          const y = centerY + Math.sin(angle) * radius;
-
-          layoutedNodes.push({
-            ...node,
-            position: { x, y }
-          });
-        });
-      }
-
-      const reactFlowNodes = layoutedNodes.map(node => ({
-        id: node.id,
-        type: 'member',
-        position: node.position,
-        data: {
-          label: node.label,
-          party: node.meta?.party || '정당정보없음',
-          inDegree: node.in ?? 0,
-          outDegree: node.out ?? 0,
-          betweenness: 0,
-          direction: direction,
-          onClick: () => onNodeClick?.(node.id),
-        },
-      }));
-
-      const reactFlowEdges = finalEdges.map((edge) => ({
-        id: `${edge.source}-${edge.target}`,
-        source: edge.source,
-        target: edge.target,
-        style: {
-          strokeWidth: Math.max(1, (edge.weight || 1) * 0.5),
-          opacity: 0.6,
-        },
-        animated: (edge.weight || 0) > 5,
-      }));
-
-      console.log(`[NetworkVisualization] Setting React Flow - nodes: ${reactFlowNodes.length}, edges: ${reactFlowEdges.length}, direction: ${direction}`);
-
-      // 간단한 상태 업데이트
-      setNodes(reactFlowNodes);
-      setEdges(reactFlowEdges);
-      // setForceUpdateKey는 제거 - 무한 루프 원인
-
-      // 통계 업데이트
-      setStats({
-        ...data.stats,
-        nodeCount: reactFlowNodes.length,
-        edgeCount: reactFlowEdges.length,
-        direction: direction
-      });
-
-      // 뷰 자동 조정 제거 - 우리 레이아웃 유지
+      // processAndDisplayGraph 호출로 통일
+      processAndDisplayGraph(fullGraphData);
+      return;
     }
-  }, [direction, focusMemberId]); // fullGraphData와 loading 제거하여 무한 루프 방지
+  }, [direction, focusMemberId, processAndDisplayGraph]);
+
 
   // Auto-fit view 제거 - 우리 레이아웃 유지
 

@@ -76,7 +76,7 @@ export const MemberNode = memo(({ data }: NodeProps<MemberNodeData>) => {
         }}
       >
         <span className="text-center leading-tight px-1">
-          {label.length > 4 ? `${label.slice(0, 3)}..` : label}
+          {(label || '').length > 4 ? `${(label || '').slice(0, 3)}..` : (label || '')}
         </span>
       </div>
 
